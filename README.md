@@ -62,6 +62,11 @@ AF Meyer, J Poort, J O'Keefe, M Sahani, and JF Linden: _A head-mounted camera sy
 
 
 
+## License
+This project is licensed under the terms of the [GNU General Public License v3.0](LICENSE).
+
+
+
 ## Contact 
 
 If you have any questions, feel free to reach out: - Email: syq458766@gmail.com
