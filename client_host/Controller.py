@@ -1,12 +1,13 @@
 from datetime import datetime
 
 from client_host.Camera import RpiCamera
+from client_host.Custom import input_data_type
 from client_host.TrackModel import DLCLiveModel, TrackLiveModel
 from client_host.DataBuffer import DataBuffer
 from client_host.GUI.ConfigManager import ConfigManager
 from client_host.PlayBack import PlayBack
 from client_host.Utils import *
-from client_host.PostDetect import DetectPosition, DetectFreezing, DetectSpeed, DetectAcceleration
+from client_host.PostDetect import DetectPosition, DetectFreezing, DetectSpeed, DetectAcceleration, DetectCustom
 from client_host.Recorder import Recorder
 
 PASS = "pass"
@@ -30,12 +31,14 @@ class Controller(object):
         self.speed_detector = None
         self.acceleration_detector = None
         self.position_detector = None
+        self.custom_detector = None
 
         self.track_buffer = None
         self.position_detector_buffer = None
         self.freezing_detector_buffer = None
         self.speed_detector_buffer = None
         self.acceleration_detector_buffer = None
+        self.custom_detector_buffer = None
 
         self.recording_label = False
 
@@ -53,12 +56,28 @@ class Controller(object):
         self.rpi_camera.camera_stop_preview()
 
     def prepare(self):
+        self.dlc_live = None
+        self.track_live = None
+        self.freezing_detector = None
+        self.speed_detector = None
+        self.acceleration_detector = None
+        self.position_detector = None
+        self.custom_detector = None
+
         detection_config = self.config_manager.get_realtime_detection_config()
         settings_config = self.config_manager.get_settings_config()
         background_photo = self.config_manager.get_background_image()
         fps = int(self.config_manager.get_settings_config()['Camera']['framerate'])
         area_type, area_points = self.config_manager.get_region_of_interest_area()
         duration, delay, interval = self.config_manager.get_settings_close_loop_parameters()
+
+        if detection_config['Custom Method']:
+            if input_data_type != 'frame' and input_data_type != 'xy' and input_data_type != 'dlc-live key points':
+                raise Exception("Unsupported input data type in Custom: {}".format(input_data_type))
+            if input_data_type == 'dlc-live key points' and detection_config['Tracking Method'] and \
+                settings_config['Tracking']['method'] != 'DLC_live':
+                raise Exception("Custom detection: When selecting DLC-Live key points, DLC-Live must be chosen.")
+
         self.rpi_camera.set_ttl_params(duration, interval)
         if detection_config['Tracking Method']:
             if settings_config['Tracking']['method'] == 'DLC_live':
@@ -68,13 +87,18 @@ class Controller(object):
             else:
                 self.track_live = TrackLiveModel(self, background_photo, area_type, area_points)
         if detection_config['Freezing Method']:
-            self.freezing_detector = DetectFreezing(self, fps, delay)
+            self.freezing_detector = DetectFreezing(self, fps, delay, duration)
         if detection_config['Speed Method']:
-            self.speed_detector = DetectSpeed(self, fps, delay)
+            self.speed_detector = DetectSpeed(self, fps, delay, duration)
         if detection_config['Acceleration Method']:
-            self.acceleration_detector = DetectAcceleration(self, delay)
+            self.acceleration_detector = DetectAcceleration(self, delay, duration)
         if detection_config['Position Method']:
-            self.position_detector = DetectPosition(self, delay)
+            self.position_detector = DetectPosition(self, delay, duration)
+        if detection_config['Custom Method']:
+            if input_data_type == 'dlc-live key points' and self.dlc_live is not None:
+                self.custom_detector = DetectCustom(self, delay, duration, self.dlc_live.use_index)
+            else:
+                self.custom_detector = DetectCustom(self, delay, duration)
 
     def cancel_prepare(self):
         detectors = {
@@ -84,14 +108,13 @@ class Controller(object):
             'speed_detector': self.speed_detector,
             'acceleration_detector': self.acceleration_detector,
             'position_detector': self.position_detector,
+            'custom_detector': self.custom_detector,
         }
 
         for name, detector in detectors.items():
             if detector is not None:
                 detector.close()
                 setattr(self, name, None)
-        # todo: unfinish
-        print(self.freezing_detector)
 
     def camera_capture(self):
         if self.rpi_camera is None:
@@ -146,6 +169,12 @@ class Controller(object):
         if self.acceleration_detector is not None:
             self.acceleration_detector_buffer = DataBuffer('acceleration buffer')
             self.acceleration_detector.start_record(self.track_buffer, self.acceleration_detector_buffer)
+        if self.custom_detector is not None:
+            self.custom_detector_buffer = DataBuffer('custom buffer')
+            if input_data_type == 'frame':
+                self.custom_detector.start_record(frame_buffer, self.custom_detector_buffer)
+            else:
+                self.custom_detector.start_record(self.track_buffer, self.custom_detector_buffer)
 
         playback = PlayBack(self, frame_buffer)
         playback.start()
@@ -173,4 +202,5 @@ class Controller(object):
         self.freezing_detector_buffer = None
         self.speed_detector_buffer = None
         self.acceleration_detector_buffer = None
+        self.custom_detector_buffer = None
         self.rpi_camera.stop_record()

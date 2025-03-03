@@ -1,6 +1,8 @@
 import sys
 import os
 
+from client_host.Custom import Custom_name, input_data_type
+
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 import tkinter as tk
@@ -278,6 +280,7 @@ class RealtimeDetectionGUI:
         self.speed_var = tk.BooleanVar(value=False)
         self.acceleration_var = tk.BooleanVar(value=False)
         self.position_var = tk.BooleanVar(value=False)
+        self.custom_var = tk.BooleanVar(value=False)
 
         tracking_checkbutton = ttk.Checkbutton(group, text='Tracking', variable=self.tracking_var,
                                                command=self.on_tracking_changed)
@@ -289,15 +292,18 @@ class RealtimeDetectionGUI:
                                                    command=lambda: self.on_checkbutton_changed(self.acceleration_var))
         position_checkbutton = ttk.Checkbutton(group, text='Position', variable=self.position_var,
                                                command=self.on_position_changed)
+        custom_checkbutton = ttk.Checkbutton(group, text=Custom_name, variable=self.custom_var,
+                                             command=self.on_custom_change)
 
         tracking_checkbutton.grid(row=0, column=0, padx=10, pady=2)
         freezing_checkbutton.grid(row=1, column=0, padx=10, pady=2)
         speed_checkbutton.grid(row=1, column=1, padx=10, pady=2)
         acceleration_checkbutton.grid(row=1, column=2, padx=10, pady=2)
         position_checkbutton.grid(row=1, column=3, padx=10, pady=2)
+        custom_checkbutton.grid(row=1, column=4, padx=10, pady=2)
 
         self.checkbutton_list = [tracking_checkbutton, freezing_checkbutton, speed_checkbutton,
-                                 acceleration_checkbutton, position_checkbutton]
+                                 acceleration_checkbutton, position_checkbutton, custom_checkbutton]
         self.set_config()
 
     def on_tracking_changed(self):
@@ -310,6 +316,13 @@ class RealtimeDetectionGUI:
             self.main_gui.analysis_gui.trajectory_map_var.set(False)
             self.main_gui.analysis_gui.freezing_analysis_var.set(False)
             self.main_gui.analysis_gui.selected_area_analysis_var.set(False)
+            if input_data_type != 'frame':
+                self.custom_var.set(False)
+        self.main_gui.close_loop_gui.update_close_loop_method_values()
+
+    def on_custom_change(self):
+        if self.custom_var.get() and input_data_type != 'frame':
+            self.tracking_var.set(True)
         self.main_gui.close_loop_gui.update_close_loop_method_values()
 
     def on_checkbutton_changed(self, var):
@@ -342,7 +355,8 @@ class RealtimeDetectionGUI:
             'Freezing Method': self.freezing_var.get(),
             'Speed Method': self.speed_var.get(),
             'Acceleration Method': self.acceleration_var.get(),
-            'Position Method': self.position_var.get()
+            'Position Method': self.position_var.get(),
+            'Custom Method': self.custom_var.get(),
         }
 
     def set_config(self):
@@ -352,6 +366,7 @@ class RealtimeDetectionGUI:
         self.speed_var.set(config['Speed Method'])
         self.acceleration_var.set(config['Acceleration Method'])
         self.position_var.set(config['Position Method'])
+        self.custom_var.set(config['Custom Method'])
 
 
 class CloseLoopGUI:
@@ -382,6 +397,8 @@ class CloseLoopGUI:
             values.append('Acceleration')
         if self.main_gui.realtime_detection_gui.position_var.get():
             values.append('Position')
+        if self.main_gui.realtime_detection_gui.custom_var.get():
+            values.append(Custom_name)
         self.close_loop_method_combobox['values'] = values
         if self.close_loop_method_var.get() not in values:
             self.close_loop_method_combobox.set('None')

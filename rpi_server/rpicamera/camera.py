@@ -21,6 +21,7 @@ import os.path as op
 import traceback
 
 import picamera
+import zmq
 from picamera import mmal
 
 try:
@@ -49,19 +50,16 @@ class DetectGPIO(object):
     def gpio_up(self):
         if GPIO_AVAILABLE and self.strobe_pin is not None:
             GPIO.output(self.strobe_pin, True)
-            print("GPIO UP")
 
     def gpio_down(self):
         if GPIO_AVAILABLE and self.strobe_pin is not None:
             GPIO.output(self.strobe_pin, False)
-            print("GPIO DOWN")
 
     def gpio_ttl(self, ttl_time=0.001):
         if GPIO_AVAILABLE and self.strobe_pin is not None:
             GPIO.output(self.strobe_pin, True)
             time.sleep(ttl_time)
             GPIO.output(self.strobe_pin, False)
-            print("GPIO TTL")
 
     def start_ttl(self):
         if not self.running:
@@ -76,9 +74,14 @@ class DetectGPIO(object):
         while self.running:
             self.gpio_ttl(self.ttl_time)
             if self.interval > 0:
-                time.sleep(self.interval-self.ttl_time)
+                time.sleep(self.interval)
             else:
                 break
+
+    def close(self):
+        self.running = False
+        if GPIO_AVAILABLE and self.strobe_pin is not None:
+            GPIO.output(self.strobe_pin, False)
 
 
 class VideoEncoderGPIO(picamera.PiVideoEncoder):
@@ -168,6 +171,8 @@ class CameraGPIO(picamera.PiCamera):
                   " to ", self.framerate)
 
         self.ts_file = None
+        self.ts_path = None
+        self.client_ip = None
 
         if GPIO_AVAILABLE and self.strobe_pin is not None:
             print("Camera: setting GPIO strobe pin ", self.strobe_pin)
@@ -186,9 +191,11 @@ class CameraGPIO(picamera.PiCamera):
 
         return encoder
 
-    def start_recording(self, ts_path, output, **kwargs):
+    def start_recording(self, ts_path, output, client_ip, **kwargs):
 
         # ts_path = op.splitext(output)[0] + '_timestamps.csv'
+        self.ts_path = ts_path
+        self.client_ip = client_ip
         try:
             self.ts_file = open(ts_path, 'w')
             self.ts_file.write('# frame timestamp, TTL timestamp\n')
@@ -201,6 +208,11 @@ class CameraGPIO(picamera.PiCamera):
         super(CameraGPIO, self).start_recording(output, **kwargs)
 
     def stop_recording(self):
+        try:
+            # catch "ValueError: I/O operation on closed file" exception
+            super(CameraGPIO, self).stop_recording()
+        except BaseException:
+            traceback.print_exc()
 
         if self.ts_file is not None:
             # make sure all (buffered) data are being written
@@ -210,11 +222,24 @@ class CameraGPIO(picamera.PiCamera):
             self.ts_file.close()
             self.ts_file = None
 
-        try:
-            # catch "ValueError: I/O operation on closed file" exception
-            super(CameraGPIO, self).stop_recording()
-        except BaseException:
-            traceback.print_exc()
+            context = zmq.Context()
+            socket = context.socket(zmq.PUSH)
+            try:
+                socket.connect(f"tcp://{self.client_ip}:5556")
+
+                file_path = self.ts_path
+                with open(file_path, "rb") as f:
+                    file_data = f.read()
+
+                socket.send(file_data)
+
+                print(f"File '{file_path}' sent successfully.")
+            finally:
+                socket.close()
+                context.term()
+
+            self.ts_path = None
+            self.client_ip = None
 
     def write_timestamps(self, pts, ets):
 

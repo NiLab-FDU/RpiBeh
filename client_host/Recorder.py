@@ -4,8 +4,10 @@ import threading
 import cv2
 import numpy as np
 import pandas as pd
+import zmq
 
 from client_host.Analysis import get_analysis
+from client_host.Custom import Custom_name
 from client_host.Utils import Log_thread_begin, Log_thread_finish
 
 
@@ -27,6 +29,7 @@ class Recorder:
         self.freezing_detector_buffer_index = -1
         self.speed_detector_buffer_index = -1
         self.acceleration_detector_buffer_index = -1
+        self.custom_detector_buffer_index = -1
 
         if track_buffer is not None:
             self.track_buffer_reader_index = track_buffer.register_reader()
@@ -38,9 +41,12 @@ class Recorder:
             self.speed_detector_buffer_index = controller.speed_detector_buffer.register_reader()
         if controller.acceleration_detector_buffer is not None:
             self.acceleration_detector_buffer_index = controller.acceleration_detector_buffer.register_reader()
+        if controller.custom_detector_buffer is not None:
+            self.custom_detector_buffer_index = controller.custom_detector_buffer.register_reader()
 
         video_file_name = os.path.join(save_dir, trial_name + ".mp4")
         self.detector_file_name = os.path.join(save_dir, trial_name + "_detector.csv")
+        self.timestamp_filename = os.path.join(save_dir, trial_name + "_timestamp.csv")
 
         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
 
@@ -82,6 +88,11 @@ class Recorder:
             thread.start()
             threads.append(thread)
 
+        if self.custom_detector_buffer_index > -0.5:
+                thread = threading.Thread(target=self.recording_custom_detection)
+                thread.start()
+                threads.append(thread)
+
         for thread in threads:
             thread.join()
 
@@ -100,6 +111,21 @@ class Recorder:
             self.video_out.write(frame[1])
         self.video_out.release()
         Log_thread_finish("Finished recording video")
+
+        context = zmq.Context()
+        socket = context.socket(zmq.PULL)
+        socket.setsockopt(zmq.RCVTIMEO, 5000)
+        try:
+            socket.bind("tcp://*:5556")
+            received_data = socket.recv()
+            with open(self.timestamp_filename, "wb") as f:
+                f.write(received_data)
+            print(f"File received and saved as {self.timestamp_filename}.")
+        except zmq.Again:
+            print("Timestamp Timeout: No data received within 5 seconds.")
+        finally:
+            socket.close()
+            context.term()
 
     def recording_process(self, process_buffer, buffer_reader_index, output_file_path, csv_name, recording_name):
         Log_thread_begin(f"Recording {recording_name}")
@@ -155,3 +181,9 @@ class Recorder:
         detector_file_name = os.path.join(self.save_dir, self.trial_name + "_acceleration_detection.csv")
         self.recording_process(self.controller.acceleration_detector_buffer, self.acceleration_detector_buffer_index,
                                detector_file_name, csv_name, 'Acceleration Detection')
+
+    def recording_custom_detection(self):
+        csv_name = ['index', 'res']
+        detector_file_name = os.path.join(self.save_dir, self.trial_name + "_" + Custom_name + "_detection.csv")
+        self.recording_process(self.controller.custom_detector_buffer, self.custom_detector_buffer_index,
+                               detector_file_name, csv_name, Custom_name + ' Detection')

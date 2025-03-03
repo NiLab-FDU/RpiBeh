@@ -41,6 +41,7 @@ class RpiCamera(object):
         self.context.term()
 
     def set_param(self):
+        self.width, self.height, self.framerate = self.controller.config_manager.get_camera_config_setting()
         msg = "Resolution {} {}".format(self.width, self.height)
         self.socket.send_string(msg)
         print(self.socket.recv())
@@ -120,7 +121,6 @@ class RpiCamera(object):
 
     def stop_record(self):
         msg = "Stop"
-        print("send string Stop")
         self.socket.send_string(msg)
         print(self.socket.recv())
 

@@ -21,6 +21,7 @@ import traceback
 import json
 import threading
 import zmq
+from datetime import datetime
 
 from .camera import CameraGPIO, DetectGPIO
 from .streams import NetworkStreamOutput
@@ -64,7 +65,7 @@ class ZmqThread(threading.Thread):
 
         while self.is_running:
 
-            msg = socket.recv()
+            msg = socket.recv().decode('utf-8')
             parts = msg.split()
             cmd = parts[0]
             if cmd == 'Start':
@@ -99,9 +100,8 @@ class ZmqThread(threading.Thread):
                 socket.send_string('GPIO TTL')
 
             elif cmd == 'Stop':
-
-                self.parameter_callback('Stop', None)
                 socket.send_string('Stopped')
+                self.parameter_callback('Stop', None)
 
             elif cmd == 'Close':
 
@@ -128,12 +128,12 @@ class ZmqThread(threading.Thread):
                 socket.send_string("Done")
 
             elif cmd == 'StartTTL':
-                self.parameter_callback('StartTTL', None)
                 socket.send_string('TTL started')
+                self.parameter_callback('StartTTL', None)
 
             elif cmd == 'StopTTL':
-                self.parameter_callback('StopTTL', None)
                 socket.send_string('TTL stopped')
+                self.parameter_callback('StopTTL', None)
 
             elif cmd == 'ResetGains':
 
@@ -271,7 +271,7 @@ class Controller(object):
             del self.camera
             self.camera = None
 
-        self.detect.stop_ttl()
+        self.detect.close()
 
         self.closed = True
 
@@ -346,9 +346,11 @@ class Controller(object):
 
             output_stream = NetworkStreamOutput(address=client_ip)
             print('init finish')
-            ts_path = op.join(rec_path, "output_timestamps.csv")
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            ts_path = op.join(rec_path, f"output_timestamps_{timestamp}.csv")
             self.camera.start_recording(output=output_stream,
                                         ts_path=ts_path,
+                                        client_ip=client_ip,
                                         format='mjpeg', 
                                         # format='h264',
                                         quality=quality)

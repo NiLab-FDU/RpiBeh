@@ -37,6 +37,9 @@ class DLCLiveModel(PostDetect):
         # pose = pose[self.use_index][pose[self.use_index][:, 2] > self.joint_likelihood_threshold]
         return pose[self.use_index, :2].mean(0) if pose.size else (np.nan, np.nan)
 
+    def get_dlc_use_index(self):
+        return self.use_index
+
 
 class TrackLiveModel(PostDetect):
     def __init__(self, controller, background, area_type, area_points):

@@ -106,7 +106,7 @@ class CameraSettingPage:
         ttk.Label(frame, text="Framerate:").grid(row=0, column=0, padx=10, pady=5, sticky=tk.W)
         self.framerate_var = tk.StringVar()
         self.framerate_combobox = ttk.Combobox(frame, textvariable=self.framerate_var, state="readonly")
-        self.framerate_combobox['values'] = ("5", "10", "15")
+        self.framerate_combobox['values'] = ("5", "10", "15", "20", "25", "30")
         self.framerate_combobox.grid(row=0, column=1, padx=10, pady=5)
         if 'framerate' in config['Camera']:
             self.framerate_var.set(config['Camera']['framerate'])
@@ -462,6 +462,9 @@ class DetectionSettingPage:
         ttk.Label(frame, text="Threshold").grid(row=0, column=1)
         ttk.Label(frame, text="Direction").grid(row=0, column=2)
         ttk.Label(frame, text="Duration").grid(row=0, column=3)
+        ttk.Label(frame, text="  XY Smooth (frame)  ").grid(row=0, column=4)
+        ttk.Label(frame, text="  Smooth (frame)  ").grid(row=0, column=5)
+
         ttk.Label(frame, text="Freezing").grid(row=1, column=0)
         ttk.Label(frame, text="Speed").grid(row=2, column=0)
         ttk.Label(frame, text="Acceleration").grid(row=3, column=0)
@@ -516,6 +519,22 @@ class DetectionSettingPage:
             speed_duration_combobox.set('0.5s')
         speed_duration_combobox.grid(row=2, column=3, padx=10, pady=5)
 
+        self.speed_XY_Smooth_var = tk.IntVar()
+        speed_XY_Smooth_spinbox = ttk.Spinbox(frame, textvariable=self.speed_XY_Smooth_var, from_=0, to=100, increment=1, width=6)
+        if 'speed_XY_Smooth' in config['Detection']:
+            self.speed_XY_Smooth_var.set(config['Detection']['speed_XY_Smooth'])
+        else:
+            self.speed_XY_Smooth_var.set(5)
+        speed_XY_Smooth_spinbox.grid(row=2, column=4, padx=10, pady=5)
+
+        self.speed_Smooth_var = tk.IntVar()
+        speed_Smooth_spinbox = ttk.Spinbox(frame, textvariable=self.speed_Smooth_var, from_=0, to=100, increment=1, width=6)
+        if 'speed_Smooth' in config['Detection']:
+            self.speed_Smooth_var.set(config['Detection']['speed_Smooth'])
+        else:
+            self.speed_Smooth_var.set(5)
+        speed_Smooth_spinbox.grid(row=2, column=5, padx=10, pady=5)
+
         # Acceleration threshold and duration
         self.acceleration_threshold_var = tk.StringVar()
         if 'acceleration_threshold' in config['Detection']:
@@ -546,6 +565,22 @@ class DetectionSettingPage:
             acceleration_duration_combobox.set('0.5s')
         acceleration_duration_combobox.grid(row=3, column=3, padx=10, pady=5)
 
+        self.acceleration_XY_Smooth_var = tk.IntVar()
+        acceleration_XY_Smooth_spinbox = ttk.Spinbox(frame, textvariable=self.acceleration_XY_Smooth_var, from_=0, to=100, increment=1, width=6)
+        if 'acceleration_XY_Smooth' in config['Detection']:
+            self.acceleration_XY_Smooth_var.set(config['Detection']['acceleration_XY_Smooth'])
+        else:
+            self.acceleration_XY_Smooth_var.set(5)
+        acceleration_XY_Smooth_spinbox.grid(row=3, column=4, padx=10, pady=5)
+
+        self.acceleration_Smooth_var = tk.IntVar()
+        acceleration_Smooth_spinbox = ttk.Spinbox(frame, textvariable=self.acceleration_Smooth_var, from_=0, to=100, increment=1, width=6)
+        if 'acceleration_Smooth' in config['Detection']:
+            self.acceleration_Smooth_var.set(config['Detection']['acceleration_Smooth'])
+        else:
+            self.acceleration_Smooth_var.set(5)
+        acceleration_Smooth_spinbox.grid(row=3, column=5, padx=10, pady=5)
+
         ttk.Label(frame, text='\'Position Detection Setting\' Click on the left \'Position\''). \
             grid(row=4, column=0, columnspan=3, pady=20)
         # Button to retrieve values
@@ -557,12 +592,18 @@ class DetectionSettingPage:
         speed_threshold = self.speed_threshold_var.get()
         speed_direction = self.speed_direction_var.get()
         speed_duration = self.speed_duration_var.get()
+        speed_XY_Smooth = self.speed_XY_Smooth_var.get()
+        speed_smooth = self.speed_Smooth_var.get()
         acceleration_threshold = self.acceleration_threshold_var.get()
         acceleration_direction = self.acceleration_direction_var.get()
         acceleration_duration = self.acceleration_duration_var.get()
+        acceleration_XY_Smooth = self.acceleration_XY_Smooth_var.get()
+        acceleration_smooth = self.acceleration_Smooth_var.get()
         print(f'Freezing - Threshold: {freezing_threshold}, Duration: {freezing_duration}')
-        print(f'Speed - Threshold: {speed_threshold}, Direction: {speed_direction}, Duration: {speed_duration}')
-        print(f'Acceleration - Threshold: {acceleration_threshold}, Direction: {acceleration_direction}, Duration: {acceleration_duration}')
+        print(f'Speed - Threshold: {speed_threshold}, Direction: {speed_direction}, Duration: {speed_duration}, '
+              f'XY Smooth: {speed_XY_Smooth}, Smooth: {speed_smooth}')
+        print(f'Acceleration - Threshold: {acceleration_threshold}, Direction: {acceleration_direction}, '
+              f'Duration: {acceleration_duration}, XY Smooth: {acceleration_XY_Smooth}, Smooth: {acceleration_smooth}')
 
     def validate_entry_ratio(self, new_value):
         """ Validates that the entry is a number between 0 and 1 """
@@ -594,9 +635,13 @@ class DetectionSettingPage:
         self.config['Detection']['speed_threshold'] = self.speed_threshold_var.get()
         self.config['Detection']['speed_direction'] = self.speed_direction_var.get()
         self.config['Detection']['speed_duration'] = self.speed_duration_var.get()
+        self.config['Detection']['speed_XY_Smooth'] = self.speed_XY_Smooth_var.get()
+        self.config['Detection']['speed_Smooth'] = self.speed_Smooth_var.get()
         self.config['Detection']['acceleration_threshold'] = self.acceleration_threshold_var.get()
         self.config['Detection']['acceleration_direction'] = self.acceleration_direction_var.get()
         self.config['Detection']['acceleration_duration'] = self.acceleration_duration_var.get()
+        self.config['Detection']['acceleration_XY_Smooth'] = self.acceleration_XY_Smooth_var.get()
+        self.config['Detection']['acceleration_Smooth'] = self.acceleration_Smooth_var.get()
         return True
 
 

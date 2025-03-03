@@ -64,7 +64,9 @@ def validate_prepare_button_input(config_manager: ConfigManager, connect_state: 
 
     # analysis & realtime detection
     if not realtime_detection_config['Tracking Method']:
-        if not all(value is False for value in realtime_detection_config.values()) or \
+        tmp_realtime_detection_config = realtime_detection_config.copy()
+        tmp_realtime_detection_config.pop('Custom Method')
+        if not all(value is False for value in tmp_realtime_detection_config.values()) or \
                 not all(value is False for value in analysis_config.values()):
             return 'Realtime detection: Tracking Method need be Selected'
 
@@ -81,6 +83,8 @@ def validate_prepare_button_input(config_manager: ConfigManager, connect_state: 
         return 'Realtime detection: Acceleration Method need be Selected'
     if close_loop_method == 'Position' and not realtime_detection_config['Position Method']:
         return 'Realtime detection: Position Method need be Selected'
+    if close_loop_method == 'Custom' and not realtime_detection_config['Custom Method']:
+        return 'Realtime detection: Custom Method need be Selected'
 
     # settings
     if ('real distance' not in settings_config['Region of interest']) or \

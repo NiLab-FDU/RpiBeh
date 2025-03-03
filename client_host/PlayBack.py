@@ -2,6 +2,7 @@ import threading
 import numpy as np
 import cv2
 
+from client_host.Custom import Custom_name
 from client_host.Utils import cv2_fill
 
 
@@ -18,6 +19,8 @@ class PlayBack:
         elif self.detector_type == 'Position':
             detector_buffer = controller.position_detector_buffer
             self.area_type, self.area_points = controller.config_manager.get_settings_position_parameters()
+        elif self.detector_type == Custom_name:
+            detector_buffer = controller.custom_detector_buffer
         else:
             detector_buffer = None
 
@@ -37,6 +40,9 @@ class PlayBack:
         self.use_detector = detector_buffer is not None
         self.use_track = self.track_buffer is not None
         self.use_dlc = controller.dlc_live is not None
+        self.dlc_use_index = []
+        if self.use_dlc:
+            self.dlc_use_index = controller.dlc_live.use_index
 
         self.radius = 3
 
@@ -49,9 +55,18 @@ class PlayBack:
         track_res = None
         detect_res = None
         if not self.use_track:
-            index, frame = self.frame_buffer.get_data(self.frame_buffer_reader_index)
-            if index is None:
-                return None, 'break', None
+            if self.use_detector:
+                detect_index, detect_res = self.detector_buffer.get_last_data(self.detector_buffer_reader_index)
+                if detect_index is None:
+                    return None, 'break', None
+                if detect_res is None:
+                    return None, 'continue', None
+                frame_index, detect_res = detect_res[0], detect_res[1]
+                frame_index, frame = self.frame_buffer.get_data_by_index(self.frame_buffer_reader_index, frame_index)
+            else:
+                index, frame = self.frame_buffer.get_data(self.frame_buffer_reader_index)
+                if index is None:
+                    return None, 'break', None
         else:
             if self.use_detector:
                 detect_index, detect_res = self.detector_buffer.get_last_data(self.detector_buffer_reader_index)
@@ -83,6 +98,12 @@ class PlayBack:
                 x, y = int(out[1]), int(out[2])
                 if not np.isnan(x):
                     frame = cv2.circle(frame, (x, y), self.radius, (0, 255, 0), thickness=-1)
+                point_list = np.array(out[3:]).reshape(-1, 3)
+                point_list = point_list[self.dlc_use_index]
+                for point in point_list:
+                    x, y = int(point[0]), int(point[1])
+                    if not np.isnan(x):
+                        frame = cv2.circle(frame, (x, y), 1, (255, 0, 0), thickness=-1)
             else:
                 out, _, _, largest_contour = track_res
                 _, x, y = out

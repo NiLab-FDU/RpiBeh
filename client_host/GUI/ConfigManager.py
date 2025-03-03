@@ -67,8 +67,14 @@ class ConfigManager:
             self.settings_config['Detection']['freezing_duration'] = '0.5s'
             self.settings_config['Detection']['speed_threshold'] = '0.007'
             self.settings_config['Detection']['speed_duration'] = '0.5s'
+            self.settings_config['Detection']['speed_direction'] = 'over'
+            self.settings_config['Detection']['speed_XY_Smooth'] = '5'
+            self.settings_config['Detection']['speed_Smooth'] = '5'
             self.settings_config['Detection']['acceleration_threshold'] = '0.007'
             self.settings_config['Detection']['acceleration_duration'] = '0.5s'
+            self.settings_config['Detection']['acceleration_direction'] = 'over'
+            self.settings_config['Detection']['acceleration_XY_Smooth'] = '5'
+            self.settings_config['Detection']['acceleration_Smooth'] = '5'
             self.settings_config['Close Loop']['duration'] = '0.2'
             self.settings_config['Close Loop']['delay'] = '2'
             self.settings_config['Close Loop']['interval'] = '0'
@@ -90,7 +96,7 @@ class ConfigManager:
         if self.realtime_detection_config is None:
             self.realtime_detection_config = {}
             config_keys = ['Tracking Method', 'Freezing Method', 'Speed Method', 'Acceleration Method',
-                           'Position Method']
+                           'Position Method', 'Custom Method']
             for key in config_keys:
                 self.realtime_detection_config[key] = False
 
@@ -124,6 +130,10 @@ class ConfigManager:
     def get_detection_threshold_and_dur(self, detection_name):
         config = self.settings_config['Detection']
         return float(config[detection_name+'_threshold']), float(config[detection_name+'_duration'].split('s')[0])
+
+    def get_detection_smooth(self, detection_name):
+        config = self.settings_config['Detection']
+        return int(config[detection_name+'_XY_Smooth']), int(config[detection_name+'_Smooth'])
 
     def get_settings_position_parameters(self):
         config = self.settings_config['Position']
