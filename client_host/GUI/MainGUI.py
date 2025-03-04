@@ -1,9 +1,9 @@
 import sys
 import os
 
-from client_host.Custom import Custom_name, input_data_type
-
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
+from client_host.Custom import Custom_name, input_data_type
 
 import tkinter as tk
 import traceback

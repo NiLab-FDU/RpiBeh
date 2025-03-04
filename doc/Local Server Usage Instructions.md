@@ -6,7 +6,7 @@ In certain cases, it is necessary to analyze local videos. We provide the `local
 
 ### 1. Preparing the Background Image
 
-Before starting the local video analysis, you need to prepare the background image for the scene. The image should be named `background_image.png` and placed in the `client_host/GUI` directory.
+Before starting the local video analysis, you need to prepare the background image for the scene. The image should be named `background_image.png` and placed in the same folder as `client_host`.
 
 
 

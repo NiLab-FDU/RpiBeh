@@ -93,7 +93,7 @@ This document provides detailed instructions for the usage, setup, and parameter
 - **File Menu:**
   - **'Save Config'**: Save the current configuration to a file.
   - **'Load Config'**: Load a previously saved configuration.
-  - Configurations are automatically saved and loaded at the start and end of the software session in the `client_host/GUI/last_config.json` file.
+  - Configurations are automatically saved and loaded at the start and end of the software session in the `last_config.json` file.
 - **Setting Menu:**
   - Access various configuration pages to adjust specific settings for the software.
 
